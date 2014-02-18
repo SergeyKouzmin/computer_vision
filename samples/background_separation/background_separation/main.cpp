@@ -39,7 +39,7 @@ void throwError(const std::string& msg) {
     exit(EXIT_FAILURE);
 }
 
-cv::Mat morphologyFilter()(cv::Mat& img) {
+cv::Mat morphologyFilter(cv::Mat& img) {
         if (!img.isContinuous()) {
                 throwError("Parammeter 'img' in 'morphologyFilter' must be continuous");
         }
@@ -52,7 +52,7 @@ cv::Mat morphologyFilter()(cv::Mat& img) {
         return buf;
 }
 
-cv::Mat connectedComponentsFilter(cv::Mat& img) {
+cv::Mat connectedComponentsFilter(cv::Mat& curFrame, cv::Mat& img) {
 
     if (!img.isContinuous()) {
         throwError("Parammeter 'img' in 'connectedComponentsFilter' must be continuous");
@@ -62,14 +62,20 @@ cv::Mat connectedComponentsFilter(cv::Mat& img) {
 
     maskContours.clear();
 
+    // Отрисовать найденные области обратно в маску
+    cv::Mat result(img.size(), img.type());
+    result.setTo(0);
+
     cv::findContours(img, maskContours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
     size_t i = 0;
 
     while (i < maskContours.size()) {
-        Contour& contour = maskContours_[i];
+        Contour& contour = maskContours[i];
 
         cv::Mat contourMat(contour, false);
         double len = cv::arcLength(contourMat, true);
+        Rect boundingRect = cv::boundingRect(contourMat);
+        cv::rectangle(curFrame, boundingRect, cv::Scalar(255));
         if (len * PERIM_SCALE < img.size().height + img.size().width) {
             // Отбрасываем контуры со слишком маленьким периметром.
             maskContours.erase(maskContours.begin() + i);
@@ -87,19 +93,19 @@ cv::Mat connectedComponentsFilter(cv::Mat& img) {
         }
     }
 
-    // Отрисовать найденные области обратно в маску
-    cv::Mat result(img.size(), img.type());
-    result.setTo(0);
     if (!maskContours.empty()) { // Обходим баг OpenCV 2.1.0; в 2.3.1 он уже исправлен.
-        cv::drawContours(result, maskContours, -1, CV_CVX_WHITE, FILLED);
+        cv::drawContours(result, maskContours, -1, cv::Scalar(255), FILLED);
     }
     return result;
 }
 
-void drawObjects(Mat& img) {
+void drawObjects(Mat& curFrame, Mat& img) {
 
+    Mat result;// = img.clone();
+    //blur( img, result, Size(3,3) );
+    //Canny( result, result, 20, 300, 5);
     Mat resultMorph = morphologyFilter(img);
-    Mat resultConnectComp = connectedComponentsFilter(resultMorph);
+    Mat resultConnectComp = connectedComponentsFilter(curFrame, resultMorph);
 
     //cvtColor( img, grayImg, COLOR_BGR2GRAY );
     /*blur( grayImg, grayImg, Size(3,3) );
@@ -172,11 +178,11 @@ void processVideo(char* videoFilename) {
         putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
                 FONT_HERSHEY_SIMPLEX, 0.5 , cv::Scalar(0,0,0));
 
+
+        drawObjects(frame, fgMaskMOG);
+
         //show the current frame and the fg masks
         imshow("Frame", frame);
-
-        drawObjects(fgMaskMOG);
-
         imshow("FG Mask MOG", fgMaskMOG);
         imshow("FG Mask MOG 2", fgMaskMOG2);
 
