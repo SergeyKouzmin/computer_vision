@@ -13,7 +13,6 @@ const bool LeftThingsDetectorSettings::USE_MORPHOLOGY = false;
 const bool LeftThingsDetectorSettings::USE_CONNECTED_COMP = true;
 
 
-
 LeftThingsDetectorSettings::LeftThingsDetectorSettings(int alertTime
 															,int maxSupervisionTime
 															, double minObjectArea
