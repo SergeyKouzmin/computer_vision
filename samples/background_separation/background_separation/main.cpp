@@ -139,7 +139,10 @@ int main(int argc, char* argv[]) {
     pMOG = createBackgroundSubtractorMOG(); //MOG approach
     pMOG2 = createBackgroundSubtractorMOG2(); //MOG2 approach
 
-    processVideo("/home/sergey/iq720p.mp4");
+    if (argc < 2) {
+        throwError("Must be one parameters - name of file");
+    }
+    processVideo(argv[1] /*"/home/sergey/iq720p.mp4"*/);
 
     //destroy GUI windows
     destroyAllWindows();
