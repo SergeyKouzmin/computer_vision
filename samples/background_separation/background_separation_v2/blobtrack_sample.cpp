@@ -378,7 +378,7 @@ int main(int argc, char* argv[])
     char*       yml_name = NULL;
     char**      yml_video_names = NULL;
     int         yml_video_num = 0;
-    char*       avi_name = "./iq720p.mp4";
+    char*       avi_name = NULL;//"./iq720p.mp4";
     const char* fg_name = NULL;
     char*       fgavi_name = NULL;
     char*       btavi_name = NULL;
@@ -471,14 +471,14 @@ int main(int argc, char* argv[])
             RO("loadstate=",loadstate_name);
 #undef RO
             {
-                char* ext = argv[i] + len-4;
+                /*char* ext = argv[i] + len-4;
                 if( strrchr(argv[i],'=') == NULL &&
                     !bParsed &&
                     (len>3 && (MY_STRICMP(ext,".avi") == 0 )))
-                {
-                    avi_name = argv[i];
+                {*/
+                    avi_name = argv[1];
                     break;
-                }
+                //}
             }   /* Next argument. */
         }
     }   /* Parse arguments. */
