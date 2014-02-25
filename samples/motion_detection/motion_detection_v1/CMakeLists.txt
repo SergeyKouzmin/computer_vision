@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 set(static_lib_suffix ".a")
 set(shared_lib_suffix ".so")
 
-set(ext_libs_dir /home/sergey/Projects/computer_vision/computer_vision/external_libs)
+set(ext_libs_dir ./../../../external_libs)
 set(opencv_lib_dir ${ext_libs_dir}/lib)
 
 include_directories(${ext_libs_dir}/include)
