@@ -1,21 +1,28 @@
 #include "opencv2/video/tracking_c.h"
+#include <opencv2/highgui/highgui.hpp>
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/highgui/highgui_c.h"
+#include "opencv2/imgproc.hpp"
 #include <time.h>
 #include <stdio.h>
 #include <ctype.h>
+//C++
+#include <iostream>
+#include <sstream>
 
-static void help(void)
-{
-    printf(
-            "\nThis program demonstrated the use of motion templates -- basically using the gradients\n"
-            "of thresholded layers of decaying frame differencing. New movements are stamped on top with floating system\n"
-            "time code and motions too old are thresholded away. This is the 'motion history file'. The program reads from the camera of your choice or from\n"
-            "a file. Gradients of motion history are used to detect direction of motoin etc\n"
-            "Usage :\n"
-            "./motempl [camera number 0-n or file name, default is camera 0]\n"
-            );
-}
+using namespace cv;
+using namespace std;
+
+const float PERIM_SCALE = 10.0;
+const int CLOSE_ITR = 1;
+
+typedef std::vector<cv::Point> Contour;
+
+typedef std::vector< std::vector<cv::Point> > Contours;
+
+// Global variables
+Contours maskContours;
+
 // various tracking parameters (in seconds)
 const double MHI_DURATION = 1;
 const double MAX_TIME_DELTA = 0.5;
@@ -34,6 +41,92 @@ IplImage *orient = 0; // orientation
 IplImage *mask = 0; // valid orientation mask
 IplImage *segmask = 0; // motion segmentation map
 CvMemStorage* storage = 0; // temporary storage
+
+
+void throwError(const std::string& msg) {
+    cerr << "Error: " << msg << endl;
+    exit(EXIT_FAILURE);
+}
+
+cv::Mat morphologyFilter(cv::Mat& img) {
+        if (!img.isContinuous()) {
+                throwError("Parammeter 'img' in 'morphologyFilter' must be continuous");
+        }
+
+        cv::Mat buf(img.size(), img.type());
+        buf.setTo(0);
+        cv::morphologyEx(img, buf, MORPH_OPEN, cv::Mat(), cv::Point(-1, -1), CLOSE_ITR);
+        cv::morphologyEx(img, buf, MORPH_CLOSE, cv::Mat(), cv::Point(-1, -1), CLOSE_ITR);
+
+        return buf;
+}
+
+cv::Mat connectedComponentsFilter(cv::Mat& curFrame, cv::Mat& img) {
+
+    if (!img.isContinuous()) {
+        throwError("Parammeter 'img' in 'connectedComponentsFilter' must be continuous");
+    }
+
+    //morphology_(img);
+
+    maskContours.clear();
+
+    // Отрисовать найденные области обратно в маску
+    cv::Mat result(img.size(), img.type());
+    result.setTo(0);
+
+    cv::findContours(img, maskContours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    size_t i = 0;
+
+    while (i < maskContours.size()) {
+        Contour& contour = maskContours[i];
+
+        cv::Mat contourMat(contour, false);
+        double len = cv::arcLength(contourMat, true);
+
+        if (len * PERIM_SCALE < img.size().height + img.size().width) {
+            // Отбрасываем контуры со слишком маленьким периметром.
+            maskContours.erase(maskContours.begin() + i);
+        } else {
+            // Достаточно большие контуры аппроксимируем указанным методом.
+            Contour newContour;
+
+            // Методы аппроксимации.
+            //cv::approxPolyDP(contourMat, newContour, CHAIN_APPROX_SIMPLE, true);
+            cv::convexHull(contourMat, newContour, true);
+
+            cv::Mat newContourMat(newContour, false);
+            Rect boundingRect = cv::boundingRect(newContourMat);
+            cv::rectangle(curFrame, boundingRect, cv::Scalar(255));
+
+            maskContours[i] = newContour;
+
+            i++;
+        }
+    }
+
+
+    if (!maskContours.empty()) { // Обходим баг OpenCV 2.1.0; в 2.3.1 он уже исправлен.
+        cv::drawContours(result, maskContours, -1, cv::Scalar(255), FILLED);
+
+    }
+    return result;
+}
+
+
+void drawObjects(Mat& curFrame, Mat& img) {
+
+    Mat result;// = img.clone();
+    //blur( img, result, Size(3,3) );
+    //Canny( result, result, 20, 300, 5);
+    Mat resultMorph = morphologyFilter(img);
+    cv::medianBlur(resultMorph, resultMorph, 5);
+    Mat resultConnectComp = connectedComponentsFilter(curFrame, resultMorph);
+
+    /// Show in a window
+    imshow( "Contours", resultConnectComp);
+}
+
 
 // parameters:
 //  img - input video frame
@@ -149,19 +242,25 @@ static void  update_mhi( IplImage* img, IplImage* dst, int diff_threshold )
         center = cvPoint( (comp_rect.x + comp_rect.width/2),
                           (comp_rect.y + comp_rect.height/2) );
 
-        cvCircle( dst, center, cvRound(magnitude*1.2), color, 3, CV_AA, 0 );
+        Mat img_mat = cv::cvarrToMat(img);
+        Mat dst_mat = cv::cvarrToMat(dst);
+        drawObjects( img_mat, dst_mat);
+
+        /*cvCircle( dst, center, cvRound(magnitude*1.2), color, 3, CV_AA, 0 );
         cvLine( dst, center, cvPoint( cvRound( center.x + magnitude*cos(angle*CV_PI/180)),
                 cvRound( center.y - magnitude*sin(angle*CV_PI/180))), color, 3, CV_AA, 0 );
+        */
+        cvCircle( img, center, cvRound(magnitude*1.2), color, 3, CV_AA, 0 );
+        cvLine( img, center, cvPoint( cvRound( center.x + magnitude*cos(angle*CV_PI/180)),
+                cvRound( center.y - magnitude*sin(angle*CV_PI/180))), color, 3, CV_AA, 0 );
+
     }
 }
-
 
 int main(int argc, char** argv)
 {
     IplImage* motion = 0;
     CvCapture* capture = 0;
-
-    help();
 
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
         capture = cvCaptureFromCAM( argc == 2 ? argv[1][0] - '0' : 0 );
@@ -180,13 +279,14 @@ int main(int argc, char** argv)
 
             if( !motion )
             {
-                motion = cvCreateImage( cvSize(image->width,image->height), 8, 3 );
+                motion = cvCreateImage( cvSize(image->width,image->height), IPL_DEPTH_8U, 1 );
                 cvZero( motion );
                 motion->origin = image->origin;
             }
 
-            update_mhi( image, motion, 30 );
+            update_mhi( image, motion, 15 );
             cvShowImage( "Motion", motion );
+            cvShowImage("CurFrame", image);
 
             if( cvWaitKey(10) >= 0 )
                 break;
