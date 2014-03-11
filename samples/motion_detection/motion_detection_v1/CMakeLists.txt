@@ -23,6 +23,6 @@ set_property(TARGET video PROPERTY IMPORTED_LOCATION ${opencv_lib_dir}/libopencv
 add_library(core SHARED IMPORTED)
 set_property(TARGET core PROPERTY IMPORTED_LOCATION ${opencv_lib_dir}/libopencv_core.so)
 
-add_executable(motempl motempl.c)
+add_executable(motempl motempl.cpp)
 target_link_libraries(motempl imgproc legacy highgui video core)
 

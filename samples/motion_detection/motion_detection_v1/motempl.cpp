@@ -9,12 +9,16 @@
 //C++
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 using namespace cv;
 using namespace std;
 
 const float PERIM_SCALE = 10.0;
 const int CLOSE_ITR = 1;
+const int MAX_OBJECT_TRACK_POINT_COUNT = 400;
+
+typedef vector<CvPoint> ObjectTrack;
 
 typedef std::vector<cv::Point> Contour;
 
@@ -22,6 +26,8 @@ typedef std::vector< std::vector<cv::Point> > Contours;
 
 // Global variables
 Contours maskContours;
+
+ObjectTrack points;
 
 // various tracking parameters (in seconds)
 const double MHI_DURATION = 1;
@@ -102,6 +108,8 @@ cv::Mat connectedComponentsFilter(cv::Mat& curFrame, cv::Mat& img) {
             maskContours[i] = newContour;
 
             i++;
+
+            //points.push_back(CvPoint(boundingRect.x + boundingRect.width / 2, boundingRect.y + boundingRect.height / 2));
         }
     }
 
@@ -127,6 +135,14 @@ void drawObjects(Mat& curFrame, Mat& img) {
     imshow( "Contours", resultConnectComp);
 }
 
+
+void drawPoints(IplImage* img, ObjectTrack objectTrack) {
+    for(int i = 0; i < objectTrack.size(); ++i) {
+        CvPoint point = objectTrack[i];
+        cvCircle( img, point, 1, cvScalar(0, 255, 0, 0), 3, CV_AA, 0 );
+    }
+
+}
 
 // parameters:
 //  img - input video frame
@@ -241,10 +257,8 @@ static void  update_mhi( IplImage* img, IplImage* dst, int diff_threshold )
         // draw a clock with arrow indicating the direction
         center = cvPoint( (comp_rect.x + comp_rect.width/2),
                           (comp_rect.y + comp_rect.height/2) );
+        points.push_back(center);
 
-        Mat img_mat = cv::cvarrToMat(img);
-        Mat dst_mat = cv::cvarrToMat(dst);
-        drawObjects( img_mat, dst_mat);
 
         /*cvCircle( dst, center, cvRound(magnitude*1.2), color, 3, CV_AA, 0 );
         cvLine( dst, center, cvPoint( cvRound( center.x + magnitude*cos(angle*CV_PI/180)),
@@ -255,6 +269,18 @@ static void  update_mhi( IplImage* img, IplImage* dst, int diff_threshold )
                 cvRound( center.y - magnitude*sin(angle*CV_PI/180))), color, 3, CV_AA, 0 );
 
     }
+
+    Mat img_mat = cv::cvarrToMat(img);
+    Mat dst_mat = cv::cvarrToMat(dst);
+
+    drawObjects( img_mat, dst_mat);
+
+    drawPoints(img, points);
+
+    if (points.size() > MAX_OBJECT_TRACK_POINT_COUNT) {
+        points.clear();
+    }
+
 }
 
 int main(int argc, char** argv)
@@ -293,6 +319,7 @@ int main(int argc, char** argv)
         }
         cvReleaseCapture( &capture );
         cvDestroyWindow( "Motion" );
+        cvDestroyWindow( "CurFrame" );
     }
 
     return 0;
