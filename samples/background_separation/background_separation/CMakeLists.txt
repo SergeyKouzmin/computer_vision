@@ -4,7 +4,10 @@ set(static_lib_suffix ".a")
 set(shared_lib_suffix ".so")
 
 set(ext_libs_dir ./../../../external_libs)
-set(opencv_lib_dir ${ext_libs_dir}/lib)
+#set(opencv_lib_dir ${ext_libs_dir}/lib64)
+
+set(opencv_lib_dir /usr/local/lib)
+
 
 include_directories(${ext_libs_dir}/include)
 
@@ -23,6 +26,8 @@ set_property(TARGET video PROPERTY IMPORTED_LOCATION ${opencv_lib_dir}/libopencv
 add_library(core SHARED IMPORTED)
 set_property(TARGET core PROPERTY IMPORTED_LOCATION ${opencv_lib_dir}/libopencv_core.so)
 
-add_executable(bs_sample main.cpp)
-target_link_libraries(bs_sample imgproc legacy highgui video core)
+add_executable(background_separation main.cpp)
+#set_target_properties(background_separation  PROPERTIES COMPILE_FLAGS "-c -pipe -O2 -Wall -W -fPIE")
+set_target_properties(background_separation PROPERTIES COMPILE_FLAGS "-O2 -Wall -pthread -g -W -fPIE -pipe")
+target_link_libraries(background_separation imgproc highgui video core)
 

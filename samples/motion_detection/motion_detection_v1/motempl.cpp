@@ -150,6 +150,7 @@ void drawPoints(IplImage* img, ObjectTrack objectTrack) {
 //  args - optional parameters
 static void  update_mhi( IplImage* img, IplImage* dst, int diff_threshold )
 {
+
     double timestamp = (double)clock()/CLOCKS_PER_SEC; // get current time in seconds
     CvSize size = cvSize(img->width,img->height); // get current frame size
     int i, idx1 = last, idx2;
@@ -285,13 +286,19 @@ static void  update_mhi( IplImage* img, IplImage* dst, int diff_threshold )
 
 int main(int argc, char** argv)
 {
+
     IplImage* motion = 0;
     CvCapture* capture = 0;
 
-    if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
-        capture = cvCaptureFromCAM( argc == 2 ? argv[1][0] - '0' : 0 );
-    else if( argc == 2 )
-        capture = cvCaptureFromFile( argv[1] );
+    if( argc == 2 ) {
+        std::cout <<  "Capture file:" << argv[1] << std::endl;
+        capture = cvCaptureFromFile(argv[1]);
+        if (!capture) {
+            std::cout << "capture is null." << std::endl;
+        }
+    } else {
+        std::cout << "Error there are no 2 arg." << std::endl;
+    }
 
     if( capture )
     {
@@ -300,11 +307,13 @@ int main(int argc, char** argv)
         for(;;)
         {
             IplImage* image = cvQueryFrame( capture );
-            if( !image )
+            if( !image ) {
                 break;
+            }
 
             if( !motion )
             {
+                std::cout << "motion" << std::endl;
                 motion = cvCreateImage( cvSize(image->width,image->height), IPL_DEPTH_8U, 1 );
                 cvZero( motion );
                 motion->origin = image->origin;
@@ -313,7 +322,6 @@ int main(int argc, char** argv)
             update_mhi( image, motion, 15 );
             cvShowImage( "Motion", motion );
             cvShowImage("CurFrame", image);
-
             if( cvWaitKey(10) >= 0 )
                 break;
         }
@@ -324,7 +332,3 @@ int main(int argc, char** argv)
 
     return 0;
 }
-
-#ifdef _EiC
-main(1,"motempl.c");
-#endif

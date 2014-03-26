@@ -4,7 +4,9 @@ set(static_lib_suffix ".a")
 set(shared_lib_suffix ".so")
 
 set(ext_libs_dir ./../../../external_libs)
-set(opencv_lib_dir ${ext_libs_dir}/lib)
+#set(opencv_lib_dir ${ext_libs_dir}/lib)
+
+set(opencv_lib_dir /usr/local/lib)
 
 include_directories(${ext_libs_dir}/include)
 
@@ -25,5 +27,7 @@ set_property(TARGET core PROPERTY IMPORTED_LOCATION ${opencv_lib_dir}/libopencv_
 
 
 add_executable(blobtrack_sample blobtrack_sample.cpp)
+#set_target_properties(blobtrack_sample PROPERTIES COMPILE_FLAGS "-c -pipe -O2 -Wall -W -fPIE")
+set_target_properties(blobtrack_sample PROPERTIES COMPILE_FLAGS "-O2 -Wall -pthread -g")
 target_link_libraries(blobtrack_sample imgproc legacy highgui video core)
 

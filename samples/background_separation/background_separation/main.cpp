@@ -165,6 +165,9 @@ int main(int argc, char* argv[]) {
     if (argc < 2) {
         throwError("Must be one parameters - name of file");
     }
+
+    std::cout << "File capture: " << argv[1] << std::endl;
+
     processVideo(argv[1] /*"/home/sergey/iq720p.mp4"*/);
 
     //destroy GUI windows

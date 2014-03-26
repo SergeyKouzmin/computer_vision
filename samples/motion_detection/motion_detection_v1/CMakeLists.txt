@@ -4,7 +4,9 @@ set(static_lib_suffix ".a")
 set(shared_lib_suffix ".so")
 
 set(ext_libs_dir ./../../../external_libs)
-set(opencv_lib_dir ${ext_libs_dir}/lib)
+#set(opencv_lib_dir ${ext_libs_dir}/lib)
+
+set(opencv_lib_dir /usr/local/lib)
 
 include_directories(${ext_libs_dir}/include)
 
